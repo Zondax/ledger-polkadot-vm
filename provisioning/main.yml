@@ -1,0 +1,78 @@
+---
+- hosts: all
+
+  vars:
+    - docker_edition: 'ce'
+    - docker_users:
+        - vagrant
+
+  roles:
+    - { role: geerlingguy.docker, become: true }
+
+  tasks:
+    - name: Install aptitude using apt
+      become: true
+      apt: name=aptitude state=latest update_cache=yes force_apt_get=yes
+
+    - name: Update and upgrade apt packages
+      become: true
+      apt:
+        upgrade: yes
+        update_cache: yes
+        cache_valid_time: 86400 #One day
+
+    - name: Install a list of packages
+      become: true
+      apt:
+        name: "{{ packages }}"
+      vars:
+        packages:
+        - build-essential 
+        - git 
+        - sudo 
+        - wget 
+        - cmake 
+        - libusb-1.0-0-dev
+        - libudev-dev
+        - python3-pip
+
+    - name: Use python 3 by default
+      become: true
+      command: /usr/bin/update-alternatives --install /usr/bin/python python /usr/bin/python3.6 1
+
+    - name: Set python 3 as default
+      become: true
+      command: /usr/bin/update-alternatives --set python /usr/bin/python3.6
+
+    - name: Install Python dependencies
+      pip:
+        name: ledgerblue
+
+    - name: Add udev permissions for Ledger devices
+      become: true
+      shell: wget -q -O - wget -q -O - https://raw.githubusercontent.com/LedgerHQ/udev-rules/20cc1651eb551c4855aaa56628c77eaeb3031c22/add_udev_rules.sh | sudo bash
+      args:
+          warn: false
+
+    - name: adding vagrant user to group plugdev
+      become: true
+      user:
+        name: vagrant
+        groups: 
+          - plugdev
+        append: yes
+
+    - name: Install CircleCI CLI (via snap)
+      become: true
+      shell: snap install docker circleci && snap connect circleci:docker docker
+      args:
+          warn: false
+
+    - name: Clone source code
+      git:
+        repo: https://github.com/ZondaX/ledger-polkadot.git
+        dest: /home/vagrant/ledger-polkadot
+        version: master
+        accept_hostkey: yes
+        force: yes
+        update: yes

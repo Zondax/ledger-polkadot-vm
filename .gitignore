@@ -1,0 +1,4 @@
+.vagrant
+provisioning/roles/geerlingguy.docker
+
+ubuntu-bionic-18\.04-cloudimg-console\.log
